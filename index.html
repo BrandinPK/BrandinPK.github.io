@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wallet Total</title>
+  <meta name="description" content="Live crypto portfolio total using public Coinbase prices. Holdings stay on your device." />
+  <meta name="theme-color" content="#0b1220" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="hero">
+      <div class="title">
+        <h1>Wallet Total</h1>
+        <span class="subtitle">Public prices · holdings stored locally</span>
+      </div>
+      <div class="status">
+        <span id="status-dot" class="dot" aria-hidden="true"></span>
+        <span id="status-text">Idle</span>
+      </div>
+    </header>
+
+    <section class="total-card" aria-live="polite">
+      <div class="total-label">Total (USD)</div>
+      <div id="total" class="total-value">$0.00</div>
+      <div class="total-meta">
+        <span id="updated">Never updated</span>
+        <span class="sep">·</span>
+        <span id="next-update">—</span>
+      </div>
+    </section>
+
+    <section class="controls">
+      <div class="interval-group" role="radiogroup" aria-label="Refresh interval">
+        <button class="interval" data-ms="5000" type="button">5s</button>
+        <button class="interval" data-ms="60000" type="button">1m</button>
+        <button class="interval" data-ms="300000" type="button">5m</button>
+        <button class="interval" data-ms="600000" type="button">10m</button>
+        <button class="interval" data-ms="3600000" type="button">1h</button>
+      </div>
+      <div class="action-group">
+        <button id="refresh-btn" type="button" class="ghost">Refresh now</button>
+        <button id="pause-btn" type="button" class="ghost">Pause</button>
+      </div>
+    </section>
+
+    <section class="holdings">
+      <div class="holdings-header">
+        <h2>Holdings</h2>
+        <span class="hint">Symbol + amount. Stored only in this browser.</span>
+      </div>
+
+      <form id="add-form" class="add-form" autocomplete="off">
+        <input id="symbol-input" name="symbol" type="text" placeholder="BTC" maxlength="10" required aria-label="Symbol" />
+        <input id="amount-input" name="amount" type="number" step="any" min="0" placeholder="0.0" required aria-label="Amount" />
+        <button type="submit">Add</button>
+      </form>
+
+      <table class="holdings-table" aria-label="Holdings">
+        <thead>
+          <tr>
+            <th>Asset</th>
+            <th class="num">Amount</th>
+            <th class="num">Price</th>
+            <th class="num">Value</th>
+            <th class="num">%</th>
+            <th aria-label="Actions"></th>
+          </tr>
+        </thead>
+        <tbody id="holdings-body">
+          <tr class="empty"><td colspan="6">No holdings yet — add one above.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer class="foot">
+      <span>Prices: <code>api.coinbase.com/v2/exchange-rates</code></span>
+      <button id="reset-btn" type="button" class="link">Clear all data</button>
+    </footer>
+  </main>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

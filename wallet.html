@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Wallet Total</title>
+<style>
+:root {
+  --bg: #0b1220;
+  --bg-elev: #121a2e;
+  --bg-elev-2: #182241;
+  --border: #1f2a48;
+  --text: #e7ecf5;
+  --text-dim: #8a96b3;
+  --accent: #5b8cff;
+  --accent-2: #7bd88f;
+  --warn: #ffb86b;
+  --error: #ff6b8a;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --radius: 12px;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: radial-gradient(ellipse at top, #15203b 0%, var(--bg) 60%) fixed;
+  color: var(--text);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  min-height: 100vh;
+}
+.app { max-width: 880px; margin: 0 auto; padding: 32px 24px 48px; display: flex; flex-direction: column; gap: 20px; }
+.hero { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.title h1 { margin: 0; font-size: 22px; letter-spacing: -0.01em; }
+.subtitle { color: var(--text-dim); font-size: 12px; }
+.status { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); background: var(--bg-elev); border: 1px solid var(--border); padding: 6px 10px; border-radius: 999px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-dim); transition: background 0.2s ease; }
+.dot[data-kind="ok"]      { background: var(--accent-2); box-shadow: 0 0 8px rgba(123, 216, 143, 0.6); }
+.dot[data-kind="loading"] { background: var(--accent);   box-shadow: 0 0 8px rgba(91, 140, 255, 0.6); animation: pulse 1.2s ease-in-out infinite; }
+.dot[data-kind="paused"]  { background: var(--warn); }
+.dot[data-kind="error"]   { background: var(--error);    box-shadow: 0 0 8px rgba(255, 107, 138, 0.6); }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+.total-card { background: linear-gradient(180deg, var(--bg-elev-2) 0%, var(--bg-elev) 100%); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
+.total-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-dim); }
+.total-value { font-size: 56px; font-weight: 600; letter-spacing: -0.02em; margin: 6px 0 8px; font-variant-numeric: tabular-nums; }
+.total-meta { font-size: 12px; color: var(--text-dim); }
+.total-meta .sep { margin: 0 6px; opacity: 0.5; }
+.controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.interval-group { display: inline-flex; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 999px; padding: 4px; gap: 2px; }
+.interval { background: transparent; border: 0; color: var(--text-dim); padding: 8px 14px; font: inherit; font-size: 13px; border-radius: 999px; cursor: pointer; transition: background 0.15s ease, color 0.15s ease; }
+.interval:hover { color: var(--text); }
+.interval.active { background: var(--accent); color: #fff; font-weight: 600; }
+.action-group { display: inline-flex; gap: 8px; }
+button.ghost { background: var(--bg-elev); border: 1px solid var(--border); color: var(--text); padding: 8px 14px; font: inherit; font-size: 13px; border-radius: 999px; cursor: pointer; }
+button.ghost:hover { background: var(--bg-elev-2); }
+.holdings { background: var(--bg-elev); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+.holdings-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; gap: 12px; }
+.holdings-header h2 { margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); }
+.hint { font-size: 11px; color: var(--text-dim); }
+.add-form { display: grid; grid-template-columns: 100px 1fr auto; gap: 8px; margin-bottom: 14px; }
+.add-form input { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 9px 12px; border-radius: 8px; font: inherit; font-size: 14px; }
+.add-form input:focus { outline: 2px solid var(--accent); outline-offset: 0; }
+.add-form button { background: var(--accent); color: #fff; border: 0; padding: 0 18px; border-radius: 8px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.add-form button:hover { filter: brightness(1.1); }
+.holdings-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.holdings-table th, .holdings-table td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--border); }
+.holdings-table th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); font-weight: 500; }
+.holdings-table td.num, .holdings-table th.num { text-align: right; }
+.holdings-table .sym { font-weight: 600; }
+.holdings-table .empty td { text-align: center; color: var(--text-dim); padding: 24px 8px; }
+.holdings-table tr:last-child td { border-bottom: 0; }
+.holdings-table .actions { text-align: right; width: 1%; white-space: nowrap; }
+button.link { background: none; border: 0; color: var(--text-dim); font: inherit; font-size: 12px; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+button.link:hover { color: var(--error); background: rgba(255, 107, 138, 0.08); }
+.foot { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-dim); padding: 4px 4px 0; }
+.foot code { background: var(--bg-elev); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+@media (max-width: 560px) {
+  .total-value { font-size: 40px; }
+  .add-form { grid-template-columns: 1fr 1fr; }
+  .add-form button { grid-column: 1 / -1; padding: 10px; }
+  .holdings-table th:nth-child(3), .holdings-table td:nth-child(3) { display: none; }
+  .holdings-table th:nth-child(5), .holdings-table td:nth-child(5) { display: none; }
+}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="hero">
+    <div class="title">
+      <h1>Wallet Total</h1>
+      <span class="subtitle">Public prices · holdings stored locally</span>
+    </div>
+    <div class="status">
+      <span id="status-dot" class="dot" aria-hidden="true"></span>
+      <span id="status-text">Idle</span>
+    </div>
+  </header>
+  <section class="total-card" aria-live="polite">
+    <div class="total-label">Total (USD)</div>
+    <div id="total" class="total-value">$0.00</div>
+    <div class="total-meta">
+      <span id="updated">Never updated</span>
+      <span class="sep">·</span>
+      <span id="next-update">—</span>
+    </div>
+  </section>
+  <section class="controls">
+    <div class="interval-group" role="radiogroup" aria-label="Refresh interval">
+      <button class="interval" data-ms="5000" type="button">5s</button>
+      <button class="interval" data-ms="60000" type="button">1m</button>
+      <button class="interval" data-ms="300000" type="button">5m</button>
+      <button class="interval" data-ms="600000" type="button">10m</button>
+      <button class="interval" data-ms="3600000" type="button">1h</button>
+    </div>
+    <div class="action-group">
+      <button id="refresh-btn" type="button" class="ghost">Refresh now</button>
+      <button id="pause-btn" type="button" class="ghost">Pause</button>
+    </div>
+  </section>
+  <section class="holdings">
+    <div class="holdings-header">
+      <h2>Holdings</h2>
+      <span class="hint">Symbol + amount. Stored only in this browser.</span>
+    </div>
+    <form id="add-form" class="add-form" autocomplete="off">
+      <input id="symbol-input" name="symbol" type="text" placeholder="BTC" maxlength="10" required aria-label="Symbol" />
+      <input id="amount-input" name="amount" type="number" step="any" min="0" placeholder="0.0" required aria-label="Amount" />
+      <button type="submit">Add</button>
+    </form>
+    <table class="holdings-table" aria-label="Holdings">
+      <thead>
+        <tr>
+          <th>Asset</th>
+          <th class="num">Amount</th>
+          <th class="num">Price</th>
+          <th class="num">Value</th>
+          <th class="num">%</th>
+          <th aria-label="Actions"></th>
+        </tr>
+      </thead>
+      <tbody id="holdings-body">
+        <tr class="empty"><td colspan="6">No holdings yet — add one above.</td></tr>
+      </tbody>
+    </table>
+  </section>
+  <footer class="foot">
+    <span>Prices: <code>api.coinbase.com/v2/exchange-rates</code></span>
+    <button id="reset-btn" type="button" class="link">Clear all data</button>
+  </footer>
+</main>
+<script>
+(() => {
+  "use strict";
+  const STORAGE_KEY = "wallet-total:v1";
+  const RATES_URL = "https://api.coinbase.com/v2/exchange-rates?currency=USD";
+  const DEFAULT_INTERVAL_MS = 60_000;
+  const el = (id) => document.getElementById(id);
+  const totalEl = el("total");
+  const updatedEl = el("updated");
+  const nextUpdateEl = el("next-update");
+  const statusDot = el("status-dot");
+  const statusText = el("status-text");
+  const holdingsBody = el("holdings-body");
+  const addForm = el("add-form");
+  const symbolInput = el("symbol-input");
+  const amountInput = el("amount-input");
+  const refreshBtn = el("refresh-btn");
+  const pauseBtn = el("pause-btn");
+  const resetBtn = el("reset-btn");
+  const intervalButtons = document.querySelectorAll(".interval");
+  const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+  const pct = new Intl.NumberFormat("en-US", { style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const num = (n, max = 8) => new Intl.NumberFormat("en-US", { maximumFractionDigits: max }).format(n);
+  const state = loadState();
+  let rates = null;
+  let lastUpdated = 0;
+  let timerId = null;
+  let nextTickAt = 0;
+  let countdownId = null;
+  let inFlight = false;
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) throw new Error("empty");
+      const parsed = JSON.parse(raw);
+      return {
+        holdings: Array.isArray(parsed.holdings) ? parsed.holdings : [],
+        intervalMs: Number.isFinite(parsed.intervalMs) ? parsed.intervalMs : DEFAULT_INTERVAL_MS,
+        paused: Boolean(parsed.paused),
+      };
+    } catch {
+      return { holdings: [], intervalMs: DEFAULT_INTERVAL_MS, paused: false };
+    }
+  }
+  function saveState() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {} }
+  function setStatus(kind, text) { statusDot.dataset.kind = kind; statusText.textContent = text; }
+  async function fetchRates() {
+    if (inFlight) return;
+    inFlight = true;
+    setStatus("loading", "Fetching prices…");
+    try {
+      const res = await fetch(RATES_URL, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      if (!json?.data?.rates) throw new Error("Malformed response");
+      rates = json.data.rates;
+      lastUpdated = Date.now();
+      setStatus(state.paused ? "paused" : "ok", state.paused ? "Paused" : "Live");
+      render();
+    } catch (err) {
+      setStatus("error", `Error: ${err.message}`);
+    } finally {
+      inFlight = false;
+    }
+  }
+  function priceOf(symbol) {
+    if (!rates) return null;
+    const r = rates[symbol.toUpperCase()];
+    if (!r) return null;
+    const n = Number(r);
+    if (!Number.isFinite(n) || n === 0) return null;
+    return 1 / n;
+  }
+  function computeRows() {
+    return state.holdings.map((h) => {
+      const price = priceOf(h.symbol);
+      const value = price == null ? null : price * h.amount;
+      return { ...h, price, value };
+    });
+  }
+  function render() { renderHoldings(); renderTotal(); renderTimestamp(); }
+  function renderTotal() {
+    const rows = computeRows();
+    const known = rows.filter((r) => r.value != null);
+    const total = known.reduce((s, r) => s + r.value, 0);
+    totalEl.textContent = usd.format(total);
+    const missing = rows.length - known.length;
+    if (missing > 0) totalEl.title = `${missing} symbol(s) had no price and were excluded.`;
+    else totalEl.removeAttribute("title");
+  }
+  function renderHoldings() {
+    if (state.holdings.length === 0) {
+      holdingsBody.innerHTML = `<tr class="empty"><td colspan="6">No holdings yet — add one above.</td></tr>`;
+      return;
+    }
+    const rows = computeRows();
+    const totalValue = rows.reduce((s, r) => s + (r.value ?? 0), 0);
+    holdingsBody.innerHTML = "";
+    rows.forEach((r, i) => {
+      const tr = document.createElement("tr");
+      const share = totalValue > 0 && r.value != null ? r.value / totalValue : 0;
+      tr.innerHTML = `
+        <td class="sym">${escapeHtml(r.symbol)}</td>
+        <td class="num">${num(r.amount)}</td>
+        <td class="num">${r.price == null ? "—" : usd.format(r.price)}</td>
+        <td class="num">${r.value == null ? "—" : usd.format(r.value)}</td>
+        <td class="num">${r.value == null ? "—" : pct.format(share)}</td>
+        <td class="actions"><button class="link" data-remove="${i}" type="button" aria-label="Remove ${escapeHtml(r.symbol)}">Remove</button></td>
+      `;
+      holdingsBody.appendChild(tr);
+    });
+  }
+  function renderTimestamp() {
+    if (!lastUpdated) updatedEl.textContent = "Never updated";
+    else updatedEl.textContent = `Updated ${new Date(lastUpdated).toLocaleTimeString()}`;
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function scheduleNext() {
+    clearTimeout(timerId);
+    clearInterval(countdownId);
+    if (state.paused) { nextUpdateEl.textContent = "Paused"; return; }
+    nextTickAt = Date.now() + state.intervalMs;
+    timerId = setTimeout(async () => { await fetchRates(); scheduleNext(); }, state.intervalMs);
+    updateCountdown();
+    countdownId = setInterval(updateCountdown, 1000);
+  }
+  function updateCountdown() {
+    const ms = Math.max(0, nextTickAt - Date.now());
+    nextUpdateEl.textContent = `next in ${formatDuration(ms)}`;
+  }
+  function formatDuration(ms) {
+    const s = Math.round(ms / 1000);
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60);
+    const rem = s % 60;
+    if (m < 60) return rem ? `${m}m ${rem}s` : `${m}m`;
+    const h = Math.floor(m / 60);
+    return `${h}h ${m % 60}m`;
+  }
+  function setIntervalMs(ms) {
+    state.intervalMs = ms;
+    saveState();
+    paintIntervalButtons();
+    scheduleNext();
+  }
+  function paintIntervalButtons() {
+    intervalButtons.forEach((btn) => {
+      const active = Number(btn.dataset.ms) === state.intervalMs;
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+  }
+  function paintPauseBtn() {
+    pauseBtn.textContent = state.paused ? "Resume" : "Pause";
+    pauseBtn.setAttribute("aria-pressed", state.paused ? "true" : "false");
+  }
+  function addHolding(symbol, amount) {
+    const sym = symbol.trim().toUpperCase();
+    if (!sym) return;
+    const amt = Number(amount);
+    if (!Number.isFinite(amt) || amt <= 0) return;
+    const existing = state.holdings.find((h) => h.symbol === sym);
+    if (existing) existing.amount = amt;
+    else state.holdings.push({ symbol: sym, amount: amt });
+    saveState();
+    render();
+  }
+  function removeHolding(index) {
+    state.holdings.splice(index, 1);
+    saveState();
+    render();
+  }
+  addForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    addHolding(symbolInput.value, amountInput.value);
+    symbolInput.value = "";
+    amountInput.value = "";
+    symbolInput.focus();
+  });
+  holdingsBody.addEventListener("click", (e) => {
+    const target = e.target.closest("[data-remove]");
+    if (!target) return;
+    removeHolding(Number(target.dataset.remove));
+  });
+  intervalButtons.forEach((btn) => {
+    btn.addEventListener("click", () => setIntervalMs(Number(btn.dataset.ms)));
+  });
+  refreshBtn.addEventListener("click", async () => {
+    await fetchRates();
+    if (!state.paused) scheduleNext();
+  });
+  pauseBtn.addEventListener("click", () => {
+    state.paused = !state.paused;
+    saveState();
+    paintPauseBtn();
+    setStatus(state.paused ? "paused" : "ok", state.paused ? "Paused" : "Live");
+    scheduleNext();
+  });
+  resetBtn.addEventListener("click", () => {
+    if (!confirm("Clear all holdings and reset settings?")) return;
+    try { localStorage.removeItem(STORAGE_KEY); } catch {}
+    state.holdings = [];
+    state.intervalMs = DEFAULT_INTERVAL_MS;
+    state.paused = false;
+    paintIntervalButtons();
+    paintPauseBtn();
+    render();
+    scheduleNext();
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && !state.paused) {
+      if (Date.now() >= nextTickAt) fetchRates().then(scheduleNext);
+    }
+  });
+  paintIntervalButtons();
+  paintPauseBtn();
+  render();
+  fetchRates().then(() => scheduleNext());
+})();
+</script>
+</body>
+</html>
